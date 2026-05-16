@@ -33,7 +33,36 @@ CORS(
     allow_headers=["Content-Type", "Authorization"],
     methods=["GET", "POST", "OPTIONS"]
 )
+# --------------------------------------------------
+# INIT DB TABLE
+# --------------------------------------------------
+def init_db():
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
 
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS chat_logs (
+            id SERIAL PRIMARY KEY,
+            user_message TEXT,
+            bot_reply TEXT,
+            response_time_seconds FLOAT,
+            client_ip TEXT,
+            user_agent TEXT,
+            origin TEXT,
+            use_kb BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """)
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        print("DB initialized: chat_logs table ready")
+
+    except Exception as e:
+        print("DB INIT ERROR:", e)
 # --------------------------------------------------
 # CONFIG
 # --------------------------------------------------
@@ -145,9 +174,6 @@ def health():
 # --------------------------------------------------
 @app.route("/chat", methods=["POST", "OPTIONS"])
 def chat():
-
-    if request.method == "OPTIONS":
-        return ("", 204)
 
     start_time = time.time()
 
@@ -331,28 +357,12 @@ def handle_error(e):
         "error": str(e)
     }), 500
 
-# --------------------------------------------------
-# AFTER REQUEST
-# --------------------------------------------------
-@app.after_request
-def add_cors_headers(response):
-
-    response.headers["Access-Control-Allow-Origin"] = "*"
-
-    response.headers["Access-Control-Allow-Headers"] = (
-        "Content-Type, Authorization"
-    )
-
-    response.headers["Access-Control-Allow-Methods"] = (
-        "GET, POST, OPTIONS"
-    )
-
-    return response
 
 # --------------------------------------------------
 # RUN
 # --------------------------------------------------
 if __name__ == "__main__":
+    init_db()
 
     app.run(
         host="0.0.0.0",
