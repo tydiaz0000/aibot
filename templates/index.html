@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chatbot</title>
+
+<!-- Markdown -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+<!-- Highlight.js -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js/styles/github-dark.min.css">
+<script src="https://cdn.jsdelivr.net/npm/highlight.js/lib/highlight.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/highlight.js/lib/languages/python.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/highlight.js/lib/languages/javascript.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/highlight.js/lib/languages/bash.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/highlight.js/lib/languages/xml.min.js"></script>
+
+<!-- MathJax -->
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$','$$'], ['\\[','\\]']]
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+<style>
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    font-family:Inter,Arial,sans-serif;
+    background:#0f172a;
+    color:#fff;
+}
+
+.container{
+    max-width:1100px;
+    margin:auto;
+    padding:20px;
+}
+
+h1{
+    text-align:center;
+    margin-bottom:20px;
+}
+
+#chatbox{
+    height:75vh;
+    overflow-y:auto;
+    background:#111827;
+    border-radius:16px;
+    padding:20px;
+    border:1px solid rgba(255,255,255,.08);
+}
+
+.message{
+    padding:14px 16px;
+    border-radius:14px;
+    margin-bottom:16px;
+    line-height:1.6;
+    word-wrap:break-word;
+}
+
+.user{
+    background:#2563eb;
+    margin-left:20%;
+}
+
+.bot{
+    background:#1e293b;
+    margin-right:12%;
+}
+
+.input-area{
+    display:flex;
+    gap:12px;
+    margin-top:18px;
+}
+
+input{
+    flex:1;
+    padding:14px;
+    border:none;
+    border-radius:12px;
+    font-size:16px;
+    outline:none;
+}
+
+button{
+    padding:14px 22px;
+    border:none;
+    border-radius:12px;
+    background:#10b981;
+    color:#fff;
+    font-weight:600;
+    cursor:pointer;
+}
+
+button:hover{
+    opacity:.9;
+}
+
+/* markdown styling */
+.bot h1,.bot h2,.bot h3{
+    margin-top:12px;
+    margin-bottom:10px;
+}
+
+.bot p{
+    margin:8px 0;
+}
+
+.bot ul,.bot ol{
+    padding-left:24px;
+}
+
+.bot blockquote{
+    border-left:4px solid #64748b;
+    margin:10px 0;
+    padding:8px 14px;
+    background:#0f172a;
+    border-radius:8px;
+}
+
+.bot table{
+    border-collapse:collapse;
+    width:100%;
+    margin:12px 0;
+    overflow:hidden;
+}
+
+.bot th,.bot td{
+    border:1px solid #334155;
+    padding:10px;
+    text-align:left;
+}
+
+.bot th{
+    background:#1e293b;
+}
+
+.bot img{
+    max-width:100%;
+    border-radius:12px;
+    margin-top:8px;
+}
+
+.bot a{
+    color:#60a5fa;
+}
+
+.bot code{
+    background:#0f172a;
+    padding:2px 6px;
+    border-radius:6px;
+    font-size:14px;
+}
+
+.bot pre{
+    background:#0b1220;
+    padding:14px;
+    border-radius:12px;
+    overflow:auto;
+    margin:12px 0;
+}
+
+.bot pre code{
+    background:none;
+    padding:0;
+}
+
+/* typing */
+.typing{
+    opacity:.7;
+    font-style:italic;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+    <h1>Qwen Chatbot</h1>
+
+    <div id="chatbox"></div>
+
+    <div class="input-area">
+        <input type="text" id="message" placeholder="Ask anything..." onkeydown="if(event.key==='Enter') sendMessage()">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+</div>
+
+<script>
+marked.setOptions({
+    breaks:true,
+    gfm:true
+});
+
+function scrollBottom(){
+    let c = document.getElementById("chatbox");
+    c.scrollTop = c.scrollHeight;
+}
+
+function addUserMessage(text){
+    let box = document.getElementById("chatbox");
+    box.innerHTML += `<div class="message user">${escapeHtml(text)}</div>`;
+    scrollBottom();
+}
+
+function addTyping(){
+    let box = document.getElementById("chatbox");
+    box.innerHTML += `<div class="message bot typing" id="typing">Thinking...</div>`;
+    scrollBottom();
+}
+
+function removeTyping(){
+    let t = document.getElementById("typing");
+    if(t) t.remove();
+}
+
+function addBotMessage(markdown){
+    let box = document.getElementById("chatbox");
+    let html = marked.parse(markdown);
+
+    box.innerHTML += `<div class="message bot">${html}</div>`;
+
+    document.querySelectorAll('pre code').forEach(el=>{
+        hljs.highlightElement(el);
+    });
+
+    if(window.MathJax){
+        MathJax.typesetPromise();
+    }
+
+    scrollBottom();
+}
+
+function escapeHtml(text){
+    let div = document.createElement("div");
+    div.innerText = text;
+    return div.innerHTML;
+}
+
+async function sendMessage(){
+    let input = document.getElementById("message");
+    let text = input.value.trim();
+
+    if(!text) return;
+
+    addUserMessage(text);
+    input.value = "";
+    addTyping();
+
+    try{
+        let response = await fetch("/chat",{
+            method:"POST",
+            headers:{
+                "Content-Type":"application/json"
+            },
+            body:JSON.stringify({
+                message:text
+            })
+        });
+
+        let data = await response.json();
+
+        removeTyping();
+        addBotMessage(data.reply);
+
+    }catch(err){
+        removeTyping();
+        addBotMessage("**Error:** Unable to contact server.");
+    }
+}
+</script>
+  <script src="https://chatbot.janzarieldiaz.com/static/widget.js" kb_name="knowledge_base_ca" data-title="Legal Assistant" data-use-kb="true"></script>
+
+</body>
+</html>

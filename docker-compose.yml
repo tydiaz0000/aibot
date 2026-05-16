@@ -1,0 +1,34 @@
+services:
+  chatbot:
+    build: .
+    container_name: chatbot
+    restart: unless-stopped
+
+    working_dir: /app
+
+    volumes:
+      - ./:/app
+      - ./logs:/app/logs
+      - hf_cache:/cache/hf
+
+    ports:
+      - "8080:8080"
+
+    environment:
+      - FLASK_ENV=development
+      - PYTHONUNBUFFERED=1
+      - TRANSFORMERS_CACHE=/cache/hf
+      - HF_HOME=/cache/hf
+      - PG_USER=${PG_USER}
+      - PG_PASS=${PG_PASS}
+      
+
+    networks:
+      - internal
+
+networks:
+  internal:
+    external: true
+
+volumes:
+  hf_cache:
