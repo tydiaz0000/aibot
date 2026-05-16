@@ -175,6 +175,9 @@ def health():
 @app.route("/chat", methods=["POST", "OPTIONS"])
 def chat():
 
+    if request.method == "OPTIONS":
+        return ("", 204)
+
     start_time = time.time()
 
     user_message = ""
@@ -357,6 +360,23 @@ def handle_error(e):
         "error": str(e)
     }), 500
 
+# --------------------------------------------------
+# AFTER REQUEST
+# --------------------------------------------------
+@app.after_request
+def add_cors_headers(response):
+
+    response.headers["Access-Control-Allow-Origin"] = "*"
+
+    response.headers["Access-Control-Allow-Headers"] = (
+        "Content-Type, Authorization"
+    )
+
+    response.headers["Access-Control-Allow-Methods"] = (
+        "GET, POST, OPTIONS"
+    )
+
+    return response
 
 # --------------------------------------------------
 # RUN
