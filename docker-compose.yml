@@ -1,7 +1,7 @@
 services:
   aibot:
     build: .
-    container_name: chatbot
+    container_name: aibot
     restart: unless-stopped
 
     working_dir: /app
